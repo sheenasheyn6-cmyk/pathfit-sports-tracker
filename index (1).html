@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PATHFIT SPORTS OFFICE - Item Tracking</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9; /* Light background */
+        }
+        .scroll-container {
+            max-height: 70vh; /* Limit height of the table area */
+            overflow-y: auto;
+        }
+        /* Custom scrollbar for aesthetics */
+        .scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background-color: #4CAF50;
+            border-radius: 4px;
+        }
+        /* Sticky header for the table */
+        .scroll-container thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="min-h-screen p-4 md:p-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">PATHFIT SPORTS OFFICE</h1>
+            <p class="text-xl text-red-600 font-semibold mt-2">Missing/Unreturned Item Tracker</p>
+            <p id="user-info" class="text-sm text-gray-500 mt-1">Status: Initializing...</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            
+            <!-- 1. Borrow Item Form (Input Panel) -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                <h2 class="text-2xl font-bold mb-4 text-green-700">Log New Borrowed Item</h2>
+                <form id="borrow-form" class="space-y-4">
+                    
+                    <div>
+                        <label for="item-type" class="block text-sm font-medium text-gray-700">Item Type</label>
+                        <select id="item-type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="" disabled selected>Select Item</option>
+                            <option value="Basketball">Basketball</option>
+                            <option value="Taekwondo Gear">Taekwondo Gear</option>
+                            <option value="Table Tennis Set">Table Tennis Set</option>
+                            <option value="Chess Set">Chess Set</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="borrower-name" class="block text-sm font-medium text-gray-700">Borrower Name (Student/Staff)</label>
+                        <input type="text" id="borrower-name" required placeholder="Enter Full Name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="student-id" class="block text-sm font-medium text-gray-700">Student ID</label>
+                        <input type="text" id="student-id" required placeholder="Enter Student ID" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+
+                    <div>
+                        <label for="borrow-date" class="block text-sm font-medium text-gray-700">Date Borrowed</label>
+                        <input type="date" id="borrow-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+
+                    <div>
+                        <label for="expected-return-date" class="block text-sm font-medium text-gray-700">Expected Return Date</label>
+                        <input type="date" id="expected-return-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+
+                    <button type="submit" id="submit-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                        Log Borrowing
+                    </button>
+                    <p id="form-message" class="text-sm text-center mt-2 hidden"></p>
+                </form>
+            </div>
+
+            <!-- 2. Borrowed Items Tracker (Output Panel) -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Currently Borrowed Items (<span id="item-count">0</span>)</h2>
+                
+                <div class="flex flex-wrap items-center space-x-4 mb-4 text-sm">
+                    <div class="flex items-center space-x-1">
+                        <div class="w-3 h-3 rounded-full bg-yellow-400"></div><span class="text-gray-600">Due Today/Tomorrow</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-3 h-3 rounded-full bg-red-600"></div><span class="text-gray-600">Overdue</span>
+                    </div>
+                </div>
+
+                <div class="scroll-container shadow-inner border border-gray-200 rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrower</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Due</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="borrowed-items-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Data will be inserted here by JavaScript -->
+                            <tr><td colspan="6" class="text-center py-4 text-gray-500" id="loading-message">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="auth-status" class="text-xs text-red-500 mt-4 hidden">Authentication failed. Data may not persist.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- Global Variables and Constants ---
+        // Provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-sports-office-app';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Firestore pathing
+        const PUBLIC_COLLECTION_PATH = `/artifacts/${appId}/public/data/borrowed_items`;
+
+        // UI Elements
+        const borrowedItemsBody = document.getElementById('borrowed-items-body');
+        const borrowForm = document.getElementById('borrow-form');
+        const loadingMessage = document.getElementById('loading-message');
+        const userInfo = document.getElementById('user-info');
+        const authStatus = document.getElementById('auth-status');
+        const itemCount = document.getElementById('item-count');
+        
+        let db, auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- Utility Functions ---
+
+        // Get status class for color coding (Timestamp object is expected)
+        const getStatusClass = (expectedReturnDate) => {
+            if (!expectedReturnDate) return 'text-gray-500';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to midnight
+
+            const dueDate = expectedReturnDate.toDate(); 
+            dueDate.setHours(0, 0, 0, 0); 
+
+            const oneDay = 24 * 60 * 60 * 1000;
+            const diffDays = Math.round((dueDate.getTime() - today.getTime()) / oneDay);
+
+            if (diffDays < 0) {
+                return 'bg-red-100 text-red-800 font-bold'; // Overdue
+            } else if (diffDays <= 1) {
+                return 'bg-yellow-100 text-yellow-800 font-semibold'; // Due Today or Tomorrow
+            } else {
+                return 'bg-green-100 text-green-700'; // On Track
+            }
+        };
+
+        // Get status text (Timestamp object is expected)
+        const getStatusText = (expectedReturnDate) => {
+            if (!expectedReturnDate) return 'N/A';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const dueDate = expectedReturnDate.toDate(); 
+            dueDate.setHours(0, 0, 0, 0);
+
+            const oneDay = 24 * 60 * 60 * 1000;
+            const diffDays = Math.round((dueDate.getTime() - today.getTime()) / oneDay);
+
+            if (diffDays < 0) {
+                return `OVERDUE (${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''})`;
+            } else if (diffDays === 0) {
+                return 'DUE TODAY';
+            } else if (diffDays === 1) {
+                return 'DUE TOMORROW';
+            } else {
+                return 'ON TRACK';
+            }
+        };
+
+        // Format Timestamp object to readable date string
+        const formatDate = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            return timestamp.toDate().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        };
+
+
+        // --- Core Firebase Logic ---
+
+        // 1. Initialize and Authenticate
+        const initializeFirebase = async () => {
+            try {
+                // setLogLevel('debug'); // Uncomment for debugging
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Listen for auth state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userInfo.textContent = `User: ${userId.substring(0, 8)}... (Authenticated)`;
+                    } else {
+                        // If sign-in fails or user logs out (shouldn't happen here), fall back to anonymous
+                        userId = crypto.randomUUID();
+                        userInfo.textContent = `User: ${userId.substring(0, 8)}... (Anonymous)`;
+                    }
+                    isAuthReady = true;
+                    // Start the real-time listener only after auth is confirmed
+                    setupRealtimeListener();
+                });
+
+                // Attempt to sign in with the custom token or anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                authStatus.textContent = `Auth Error: ${error.message}. Functionality limited.`;
+                authStatus.classList.remove('hidden');
+                isAuthReady = true; 
+            }
+        };
+        
+        // 2. Real-time Data Listener
+        const setupRealtimeListener = () => {
+            if (!isAuthReady || !db) return;
+            
+            // Query the public collection.
+            const q = collection(db, PUBLIC_COLLECTION_PATH); 
+
+            // Subscribe to real-time updates
+            onSnapshot(q, (snapshot) => {
+                const items = [];
+                snapshot.forEach((doc) => {
+                    items.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort items in memory: Overdue first, then by expected return date
+                items.sort((a, b) => {
+                    const dateA = a.returnDateExpected ? a.returnDateExpected.toDate().getTime() : Infinity;
+                    const dateB = b.returnDateExpected ? b.returnDateExpected.toDate().getTime() : Infinity;
+                    
+                    const isOverdueA = getStatusText(a.returnDateExpected).startsWith('OVERDUE');
+                    const isOverdueB = getStatusText(b.returnDateExpected).startsWith('OVERDUE');
+
+                    // Prioritize overdue items
+                    if (isOverdueA && !isOverdueB) return -1;
+                    if (!isOverdueA && isOverdueB) return 1;
+                    
+                    return dateA - dateB; // Sort by date otherwise
+                });
+                
+                renderBorrowedItems(items);
+            }, (error) => {
+                console.error("Error listening to Firestore data:", error);
+                // Display error message
+                borrowedItemsBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-red-500">Error fetching data: ${error.message}</td></tr>`;
+                itemCount.textContent = 0;
+            });
+        };
+
+        // 3. Add New Item
+        const saveItem = async (e) => {
+            e.preventDefault();
+            if (!isAuthReady || !db) {
+                showMessage("Database not ready. Please wait for initialization.", 'text-red-500');
+                return;
+            }
+
+            const itemType = document.getElementById('item-type').value;
+            const borrowerName = document.getElementById('borrower-name').value.trim();
+            const studentId = document.getElementById('student-id').value.trim(); // NEW FIELD
+            const borrowDateStr = document.getElementById('borrow-date').value;
+            const returnDateExpectedStr = document.getElementById('expected-return-date').value;
+            const submitButton = document.getElementById('submit-button');
+            
+            if (!itemType || !borrowerName || !studentId || !borrowDateStr || !returnDateExpectedStr) {
+                 showMessage("Please fill in all fields.", 'text-red-500');
+                 return;
+            }
+
+            // Disable button during operation
+            submitButton.disabled = true;
+            submitButton.textContent = 'Logging...';
+
+            try {
+                const newItem = {
+                    item: itemType,
+                    borrowerName: borrowerName,
+                    studentId: studentId, // NEW FIELD ADDED
+                    // Convert date strings directly to native JavaScript Date objects for Firestore
+                    borrowDate: new Date(borrowDateStr),
+                    returnDateExpected: new Date(returnDateExpectedStr),
+                    userId: userId,
+                    timestamp: new Date()
+                };
+
+                // Add the new item to the public collection
+                await addDoc(collection(db, PUBLIC_COLLECTION_PATH), newItem);
+
+                showMessage("Item successfully logged!", 'text-green-600');
+                borrowForm.reset();
+                // Pre-fill today's date for convenience
+                document.getElementById('borrow-date').valueAsDate = new Date();
+
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage(`Failed to log item: ${error.message}`, 'text-red-500');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Log Borrowing';
+            }
+        };
+
+        // 4. Mark Item as Returned (Delete)
+        const returnItem = async (docId) => {
+            if (!isAuthReady || !db) return;
+            
+            // Confirmation via custom modal message (since alert() is forbidden)
+            if (!window.confirm("Are you sure you want to mark this item as returned? This action is permanent and will remove the record.")) {
+                return;
+            }
+
+            try {
+                // Get the document reference
+                const docRef = doc(db, PUBLIC_COLLECTION_PATH, docId);
+                // Delete the document
+                await deleteDoc(docRef);
+                console.log("Document successfully deleted (Item returned)!");
+
+            } catch (error) {
+                console.error("Error removing document: ", error);
+            }
+        };
+
+        // --- UI Rendering ---
+        
+        const renderBorrowedItems = (items) => {
+            borrowedItemsBody.innerHTML = ''; // Clear existing rows
+            itemCount.textContent = items.length;
+            
+            if (items.length === 0) {
+                borrowedItemsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No items are currently borrowed. Excellent!</td></tr>';
+                return;
+            }
+            
+            items.forEach(item => {
+                const statusClass = getStatusClass(item.returnDateExpected);
+                const statusText = getStatusText(item.returnDateExpected);
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-100 transition duration-150 ease-in-out';
+                
+                row.innerHTML = `
+                    <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${item.item}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">${item.borrowerName}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">${item.studentId || 'N/A'}</td> <!-- NEW COLUMN -->
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">${formatDate(item.returnDateExpected)}</td>
+                    <td class="px-3 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-green-600 hover:text-green-900 transition duration-150 ease-in-out bg-green-100 p-1 rounded-md" 
+                                onclick="window.returnItem('${item.id}')">
+                            Mark Returned
+                        </button>
